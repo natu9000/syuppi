@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家計簿アプリ</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+</head>
+<body>
+
+    <header>
+        <h1>家計簿</h1>
+    </header>
+
+    <main>
+        <div class="controls">
+            <button id="add-expense-btn">支出を記録</button>
+            <button id="export-csv-all-btn">CSVエクスポート（全件）</button>
+            <button id="export-csv-range-btn">CSVエクスポート（範囲指定）</button>
+        </div>
+
+        <div id="expense-form-container" class="hidden">
+            <form id="expense-form">
+                <input type="hidden" id="expense-id">
+                
+                <div class="form-group">
+                    <label for="date">支出日</label>
+                    <input type="date" id="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amount">金額（JPY）</label>
+                    <input type="number" id="amount" placeholder="例: 1000" required min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">カテゴリ</label>
+                    <select id="category" required></select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tags">タグ（複数可）</label>
+                    <div id="tags-container"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="memo-template">メモテンプレート</label>
+                    <select id="memo-template">
+                        <option value="">-- テンプレートを選択 --</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="memo">メモ</label>
+                    <textarea id="memo" rows="3"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit">保存</button>
+                    <button type="button" id="cancel-btn">キャンセル</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="expense-list-container">
+            <h2>支出一覧</h2>
+            <div id="expense-list"></div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
