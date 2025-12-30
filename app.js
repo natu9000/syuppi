@@ -202,58 +202,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 支出一覧の描画 ---
     function renderExpenses() {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const index = store.index('date');
-        const expenses = []; // 日付で降順ソート
+  const transaction = db.transaction([STORE_NAME], 'readonly');
+  const store = transaction.objectStore(STORE_NAME);
+  const index = store.index('date');
 
-        index.openCursor(null, 'prev').onsuccess = (event) => {
-            const cursor = event.target.result;
-            if (cursor) {
-                expenses.push(cursor.value);
-                cursor.continue();
-            } else {
-                renderExpenseList(expenses);
-            }
-        };
+  const expenses = []; //日付で降順ソート
 
-        request.onsuccess = (event) => {
-            const expenses = event.target.result;
-            expenseList.innerHTML = '';
-            if (expenses.length === 0) {
-                expenseList.innerHTML = '<p>支出データがありません。</p>';
-                return;
-            }
+  index.openCursor(null, 'prev').onsuccess = (event) => {
+    const cursor = event.target.result;
+    if (cursor) {
+      expenses.push(cursor.value);
+      cursor.continue();
+    } else {
+      expenseList.innerHTML = '';
 
-            expenses.forEach(expense => {
-                const item = document.createElement('div');
-                item.className = 'expense-item';
-                item.innerHTML = `
-                    <div class="expense-details">
-                        <div class="date">${expense.date}</div>
-                        <div class="amount">${expense.amount_jpy.toLocaleString()} 円</div>
-                        <div class="category">${expense.category}</div>
-                        ${expense.tags ? `<div class="tags">#${expense.tags.replace(/;/g, ' #')}</div>` : ''}
-                        ${expense.memo ? `<div class="memo">${escapeHTML(expense.memo)}</div>` : ''}
-                    </div>
-                    <div class="expense-actions">
-                        <button class="edit-btn" data-id="${expense.id}">編集</button>
-                        <button class="delete-btn" data-id="${expense.id}">削除</button>
-                    </div>
-                `;
-                expenseList.appendChild(item);
-            });
+      if (expenses.length === 0) {
+        expenseList.innerHTML = '<div class="no-data">NO DATA</div>';
+        return;
+      }
 
-            // イベントリスナーを再設定
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => editExpense(e.target.dataset.id));
-            });
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => deleteExpense(e.target.dataset.id));
-            });
-        };
-        request.onerror = (e) => console.error('Error fetching expenses:', e.target.error);
+      expenses.forEach(expense => {
+        const item = document.createElement('div');
+        item.className = 'expense-item';
+        item.innerHTML = `
+          <div class="expense-details">
+            <div class="date">${expense.date}</div>
+            <div class="amount">${expense.amount_jpy.toLocaleString()} 円</div>
+            <div class="category">${expense.category}</div>
+            ${expense.tags ? `<div class="tags">#${expense.tags.replace(/;/g, ' #')}</div>` : ''}
+            ${expense.memo ? `<div class="memo">${escapeHTML(expense.memo)}</div>` : ''}
+          </div>
+          <div class="expense-actions">
+            <button class="edit-btn" data-id="${expense.id}">編集</button>
+            <button class="delete-btn" data-id="${expense.id}">削除</button>
+          </div>
+        `;
+        expenseList.appendChild(item);
+      });
+
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => editExpense(e.target.dataset.id));
+      });
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => deleteExpense(e.target.dataset.id));
+      });
     }
+  };
+
+  index.openCursor(null, 'prev').onerror = (e) =>
+    console.error('Error fetching expenses:', e.target.error);
+}
+
     
     // HTMLエスケープ
     function escapeHTML(str) {

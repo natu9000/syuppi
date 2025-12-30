@@ -168,3 +168,12 @@ textarea {
 .hidden {
     display: none;
 }
+
+.no-data {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+  background: #fff;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+}
