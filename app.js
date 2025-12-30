@@ -1,7 +1,7 @@
 // Service Workerの登録
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
             .then(registration => {
                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
             })
@@ -205,7 +205,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
         const index = store.index('date');
-        const request = index.getAll(null, 'prev'); // 日付で降順ソート
+        const expenses = []; // 日付で降順ソート
+
+        index.openCursor(null, 'prev').onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (cursor) {
+                expenses.push(cursor.value);
+                cursor.continue();
+            } else {
+                renderExpenseList(expenses);
+            }
+        };
 
         request.onsuccess = (event) => {
             const expenses = event.target.result;
