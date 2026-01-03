@@ -35,8 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagsContainer = document.getElementById('tags-container');
     const memoTemplateSelect = document.getElementById('memo-template');
     const memoInput = document.getElementById('memo');
+    const exportCsvPrevBtn = document.getElementById('export-csv-prev-btn');
     const exportCsvAllBtn = document.getElementById('export-csv-all-btn');
-    const exportCsvRangeBtn = document.getElementById('export-csv-range-btn');
+    const deletePrevBtn = document.getElementById('delete-prev-btn');
     const budgetFoodRemaining = document.getElementById('budget-food-remaining');
     const budgetFoodSpent = document.getElementById('budget-food-spent');
     const budgetFoodTotal = document.getElementById('budget-food-total');
@@ -146,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             // 新規登録モード: 日付の初期値を今日に設定
-            document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('date').value = toJSTDateString(new Date());
         }
         
         expenseFormContainer.classList.remove('hidden');
@@ -172,8 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
             amount_jpy: parseInt(document.getElementById('amount').value, 10),
             category: document.getElementById('category').value,
             tags: selectedTags,
-            memo: memoInput.value.trim(),
-            updated_at: new Date().toISOString()
+            memo: normalizeMemo(memoInput.value),
+            updated_at: toJSTDateTimeString(new Date())
         };
 
         const transaction = db.transaction([STORE_NAME], 'readwrite');
@@ -213,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 支出一覧の描画 ---
-    function renderExpenses() {
+function renderExpenses() {
   const transaction = db.transaction([STORE_NAME], 'readonly');
   const store = transaction.objectStore(STORE_NAME);
   const index = store.index('date');
@@ -294,6 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatJPY(amount) {
         return `${amount.toLocaleString()} 円`;
     }
+
+    function normalizeMemo(value) {
+        return value.replace(/[\r\n]+/g, ' ').trim();
+    }
     
     // HTMLエスケープ
     function escapeHTML(str) {
@@ -331,44 +336,136 @@ document.addEventListener('DOMContentLoaded', () => {
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `expenses_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute("download", `expenses_${toJSTDateString(new Date())}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     }
 
+    function confirmWithExpenseList(expenses, actionLabel) {
+        const listText = expenses.map(expense => {
+            const memo = expense.memo ? ` ${expense.memo}` : '';
+            return `${expense.date} ${expense.amount_jpy.toLocaleString()}円 ${expense.category}${memo}`;
+        }).join('\n');
+        return confirm(`対象データ:\n${listText}\n\nこの内容で${actionLabel}しますか？`);
+    }
+
     function handleExportAll() {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
         const request = store.getAll();
-        request.onsuccess = (e) => exportToCSV(e.target.result);
+        request.onsuccess = (e) => {
+            const expenses = e.target.result;
+            if (expenses.length === 0) {
+                alert('対象データはありません。');
+                return;
+            }
+            if (!confirmWithExpenseList(expenses, '出力')) return;
+            exportToCSV(expenses);
+        };
         request.onerror = (e) => console.error('Error exporting all data:', e.target.error);
     }
     
-    function handleExportRange() {
-        const start = prompt('開始日 (YYYY-MM-DD) を入力してください:');
-        const end = prompt('終了日 (YYYY-MM-DD) を入力してください:');
-        
-        if (!start || !end || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
-            alert('日付の形式が正しくありません。');
-            return;
-        }
-
-        const range = IDBKeyRange.bound(start, end);
+    function handleExportPrevMonth() {
+        const range = getPrevMonthRange();
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
         const index = store.index('date');
         const request = index.getAll(range);
 
         request.onsuccess = (e) => {
-            if (e.target.result.length === 0) {
-                alert('指定された範囲にデータはありません。');
+            const expenses = e.target.result;
+            if (expenses.length === 0) {
+                alert('前月のデータはありません。');
                 return;
             }
-            exportToCSV(e.target.result);
+            if (!confirmWithExpenseList(expenses, '出力')) return;
+            exportToCSV(expenses);
         };
         request.onerror = (e) => console.error('Error exporting range data:', e.target.error);
+    }
+
+    function getPrevMonthRange() {
+        const nowJST = getJSTNow();
+        let year = nowJST.getUTCFullYear();
+        let monthIndex = nowJST.getUTCMonth() - 1;
+        if (monthIndex < 0) {
+            monthIndex = 11;
+            year -= 1;
+        }
+        const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+        const start = formatDateParts(year, monthIndex, 1);
+        const end = formatDateParts(year, monthIndex, lastDay);
+        return IDBKeyRange.bound(start, end);
+    }
+
+    function deletePrevMonthData() {
+        const range = getPrevMonthRange();
+        const listTransaction = db.transaction([STORE_NAME], 'readonly');
+        const listStore = listTransaction.objectStore(STORE_NAME);
+        const listIndex = listStore.index('date');
+        const listRequest = listIndex.getAll(range);
+
+        listRequest.onsuccess = (e) => {
+            const expenses = e.target.result;
+            if (expenses.length === 0) {
+                alert('前月のデータはありません。');
+                return;
+            }
+            if (!confirmWithExpenseList(expenses, '削除')) return;
+
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const index = store.index('date');
+
+            index.openCursor(range).onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                }
+            };
+
+            transaction.oncomplete = () => {
+                renderExpenses();
+            };
+            transaction.onerror = (err) => console.error('Error deleting previous month data:', err.target.error);
+        };
+        listRequest.onerror = (e) => console.error('Error fetching previous month data:', e.target.error);
+    }
+
+    function getJSTNow() {
+        const now = new Date();
+        const offsetMinutes = 9 * 60 - now.getTimezoneOffset();
+        return new Date(now.getTime() + offsetMinutes * 60 * 1000);
+    }
+
+    function toJSTDateString(date) {
+        const jst = new Date(date.getTime() + (9 * 60 - date.getTimezoneOffset()) * 60 * 1000);
+        const year = jst.getUTCFullYear();
+        const month = jst.getUTCMonth() + 1;
+        const day = jst.getUTCDate();
+        return formatDateParts(year, month - 1, day);
+    }
+
+    function toJSTDateTimeString(date) {
+        const jst = new Date(date.getTime() + (9 * 60 - date.getTimezoneOffset()) * 60 * 1000);
+        const year = jst.getUTCFullYear();
+        const month = jst.getUTCMonth() + 1;
+        const day = jst.getUTCDate();
+        const hours = jst.getUTCHours();
+        const minutes = jst.getUTCMinutes();
+        const seconds = jst.getUTCSeconds();
+        return `${year}-${pad2(month)}-${pad2(day)}T${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}+09:00`;
+    }
+
+    function formatDateParts(year, monthIndex, day) {
+        return `${year}-${pad2(monthIndex + 1)}-${pad2(day)}`;
+    }
+
+    function pad2(value) {
+        return String(value).padStart(2, '0');
     }
 
 
@@ -376,8 +473,9 @@ document.addEventListener('DOMContentLoaded', () => {
     addExpenseBtn.addEventListener('click', () => showForm());
     cancelBtn.addEventListener('click', hideForm);
     expenseForm.addEventListener('submit', saveExpense);
+    exportCsvPrevBtn.addEventListener('click', handleExportPrevMonth);
     exportCsvAllBtn.addEventListener('click', handleExportAll);
-    exportCsvRangeBtn.addEventListener('click', handleExportRange);
+    deletePrevBtn.addEventListener('click', deletePrevMonthData);
 
 
     // --- アプリケーションの初期化 ---

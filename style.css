@@ -90,12 +90,24 @@ button:hover {
     background-color: #45a049;
 }
 
-#export-csv-all-btn, #export-csv-range-btn {
+#export-csv-all-btn,
+#export-csv-prev-btn {
     background-color: var(--accent-blue);
+    color: #e5e7eb;
 }
 
-#export-csv-all-btn:hover, #export-csv-range-btn:hover {
+#export-csv-all-btn:hover,
+#export-csv-prev-btn:hover {
     background-color: #092f81;
+}
+
+#delete-prev-btn {
+    background-color: var(--danger-color);
+    color: #fef2f2;
+}
+
+#delete-prev-btn:hover {
+    background-color: #dc2626;
 }
 
 #expense-form-container {
@@ -128,6 +140,18 @@ textarea {
     box-sizing: border-box;
     background-color: var(--surface-elevated);
     color: var(--text-color);
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
 
 #tags-container {
