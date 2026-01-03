@@ -9,8 +9,27 @@
 </head>
 <body>
 
-    <header>
-        <h1>家計簿</h1>
+    <header class="budget-header">
+        <div class="budget-card budget-food">
+            <div class="budget-title">食費</div>
+            <div class="budget-amount" id="budget-food-remaining">-</div>
+            <div class="budget-meta">
+                <span>予算</span>
+                <span id="budget-food-total">-</span>
+                <span>使用</span>
+                <span id="budget-food-spent">-</span>
+            </div>
+        </div>
+        <div class="budget-card budget-other">
+            <div class="budget-title">OTHER</div>
+            <div class="budget-amount" id="budget-other-remaining">-</div>
+            <div class="budget-meta">
+                <span>予算</span>
+                <span id="budget-other-total">-</span>
+                <span>使用</span>
+                <span id="budget-other-spent">-</span>
+            </div>
+        </div>
     </header>
 
     <main>

@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
         '医療費': ['薬', '受診', '健康診断'],
         'その他': ['贈り物', '飲み会', 'Amazon']
     };
+    const BUDGET_FOOD_INITIAL = 30000;
+    const BUDGET_OTHER_INITIAL = 30000;
 
     // --- DOM要素の取得 ---
     const expenseFormContainer = document.getElementById('expense-form-container');
@@ -35,6 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const memoInput = document.getElementById('memo');
     const exportCsvAllBtn = document.getElementById('export-csv-all-btn');
     const exportCsvRangeBtn = document.getElementById('export-csv-range-btn');
+    const budgetFoodRemaining = document.getElementById('budget-food-remaining');
+    const budgetFoodSpent = document.getElementById('budget-food-spent');
+    const budgetFoodTotal = document.getElementById('budget-food-total');
+    const budgetOtherRemaining = document.getElementById('budget-other-remaining');
+    const budgetOtherSpent = document.getElementById('budget-other-spent');
+    const budgetOtherTotal = document.getElementById('budget-other-total');
     
     // --- データベース関連 ---
     let db;
@@ -221,10 +229,12 @@ document.addEventListener('DOMContentLoaded', () => {
       expenseList.innerHTML = '';
 
       if (expenses.length === 0) {
+        updateBudget(expenses);
         expenseList.innerHTML = '<div class="no-data">NO DATA</div>';
         return;
       }
 
+      updateBudget(expenses);
       expenses.forEach(expense => {
         const item = document.createElement('div');
         item.className = 'expense-item';
@@ -257,6 +267,33 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Error fetching expenses:', e.target.error);
 }
 
+    function updateBudget(expenses) {
+        let foodSpent = 0;
+        let otherSpent = 0;
+
+        expenses.forEach(expense => {
+            if (expense.category === '食費') {
+                foodSpent += expense.amount_jpy;
+            } else {
+                otherSpent += expense.amount_jpy;
+            }
+        });
+
+        const foodRemaining = BUDGET_FOOD_INITIAL - foodSpent;
+        const otherRemaining = BUDGET_OTHER_INITIAL - otherSpent;
+
+        budgetFoodTotal.textContent = formatJPY(BUDGET_FOOD_INITIAL);
+        budgetFoodSpent.textContent = formatJPY(foodSpent);
+        budgetFoodRemaining.textContent = formatJPY(foodRemaining);
+
+        budgetOtherTotal.textContent = formatJPY(BUDGET_OTHER_INITIAL);
+        budgetOtherSpent.textContent = formatJPY(otherSpent);
+        budgetOtherRemaining.textContent = formatJPY(otherRemaining);
+    }
+
+    function formatJPY(amount) {
+        return `${amount.toLocaleString()} 円`;
+    }
     
     // HTMLエスケープ
     function escapeHTML(str) {
