@@ -1,15 +1,15 @@
 // Service Workerの登録
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(registration => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(error => {
-                console.log('ServiceWorker registration failed: ', error);
-            });
-    });
-}
+// if ('serviceWorker' in navigator) {
+//     window.addEventListener('load', () => {
+//        // navigator.serviceWorker.register('./sw-v5.js')
+//             .then(registration => {
+//                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
+//             })
+//             .catch(error => {
+//                 console.log('ServiceWorker registration failed: ', error);
+//             });
+//     });
+// }
 document.addEventListener('DOMContentLoaded', () => {
     // --- 定数定義 ---
     const CATEGORIES = ['食費','生活雑貨', '交通費', '趣味', '医療費','その他'];

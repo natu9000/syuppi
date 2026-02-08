@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.webmanifest">
 </head>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    // どの入口（Safari/ホーム画面）でも同じスコープに揃える
+    const scope = new URL('./', location.href).pathname;
+    navigator.serviceWorker.register('./sw-v6.js', { scope });
+  }
+</script>
+
 <body>
 
     <header class="budget-header">
