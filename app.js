@@ -437,12 +437,11 @@ function renderExpenses() {
 
     function getJSTNow() {
         const now = new Date();
-        const offsetMinutes = 9 * 60 - now.getTimezoneOffset();
-        return new Date(now.getTime() + offsetMinutes * 60 * 1000);
+        return new Date(now.getTime() + 9 * 60 * 60 * 1000);
     }
 
     function toJSTDateString(date) {
-        const jst = new Date(date.getTime() + (9 * 60 - date.getTimezoneOffset()) * 60 * 1000);
+        const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
         const year = jst.getUTCFullYear();
         const month = jst.getUTCMonth() + 1;
         const day = jst.getUTCDate();
@@ -450,7 +449,7 @@ function renderExpenses() {
     }
 
     function toJSTDateTimeString(date) {
-        const jst = new Date(date.getTime() + (9 * 60 - date.getTimezoneOffset()) * 60 * 1000);
+        const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
         const year = jst.getUTCFullYear();
         const month = jst.getUTCMonth() + 1;
         const day = jst.getUTCDate();
