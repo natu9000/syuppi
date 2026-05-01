@@ -10,7 +10,6 @@
 
 <script>
   if ('serviceWorker' in navigator) {
-    // どの入口（Safari/ホーム画面）でも同じスコープに揃える
     const scope = new URL('./', location.href).pathname;
     navigator.serviceWorker.register('./sw-v6.js', { scope });
   }
@@ -45,7 +44,7 @@
         <div class="controls">
             <button id="add-expense-btn">支出を記録</button>
             <button id="export-csv-prev-btn">前月データ出力</button>
-            <button id="export-csv-all-btn">一括出力</button>
+            <button id="export-csv-all-btn">全件出力</button>
             <button id="delete-prev-btn">前月データ削除</button>
         </div>
 
@@ -59,7 +58,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="amount">金額（JPY）</label>
+                    <label for="amount">金額 (JPY)</label>
                     <input type="tel" id="amount" placeholder="例: 1000" required min="1">
                 </div>
                 
@@ -69,7 +68,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="tags">タグ（複数可）</label>
+                    <label for="tags">タグ (複数可)</label>
                     <div id="tags-container"></div>
                 </div>
 
@@ -97,6 +96,10 @@
             <div id="expense-list"></div>
         </div>
     </main>
+
+    <footer class="app-footer">
+      <span id="app-version"></span>
+    </footer>
 
     <script src="app.js"></script>
 </body>

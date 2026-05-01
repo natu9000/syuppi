@@ -1,4 +1,4 @@
-// Service Workerの登録
+﻿// Service Worker縺ｮ逋ｻ骭ｲ
 // if ('serviceWorker' in navigator) {
 //     window.addEventListener('load', () => {
 //        // navigator.serviceWorker.register('./sw-v5.js')
@@ -11,21 +11,23 @@
 //     });
 // }
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 定数定義 ---
-    const CATEGORIES = ['食費','生活雑貨', '交通費', '趣味', '医療費','その他'];
-    const TAGS = ['スーパー', 'コンビニ', '自販機', 'Amazon', 'ドラッグストア', '飲食店', '交通機関'];
+    const APP_LAST_UPDATED = '2026-05-01';
+    const SW_VERSION = 'v6';
+    // --- 螳壽焚螳夂ｾｩ ---
+    const CATEGORIES = ['食費', '日用品', '交通費', '娯楽', '特別費', 'その他'];
+    const TAGS = ['スーパー', 'コンビニ', '自炊', 'Amazon', 'ドラッグストア', '外食', '日用品'];
     const MEMO_TEMPLATES = {
-        '食費': ['朝食', '昼食', '夕食', '間食'],
-        '生活雑貨': ['消耗品', '衣類', '家具'],
+        '食費': ['朝食', '昼食', '夕食', '飲み物'],
+        '日用品': ['洗剤', 'ティッシュ', 'タオル'],
         '交通費': ['電車', 'バス', 'タクシー'],
-        '趣味': ['映画', 'ゲーム', '書籍'],
-        '医療費': ['薬', '受診', '健康診断'],
-        'その他': ['贈り物', '飲み会', 'Amazon']
+        '娯楽': ['映画', 'ゲーム', '書籍'],
+        '特別費': ['病院', '美容院', '家具'],
+        'その他': ['贈り物', '外食', 'Amazon']
     };
     const BUDGET_FOOD_INITIAL = 30000;
     const BUDGET_OTHER_INITIAL = 30000;
 
-    // --- DOM要素の取得 ---
+    // --- DOM隕∫ｴ縺ｮ蜿門ｾ・---
     const expenseFormContainer = document.getElementById('expense-form-container');
     const expenseForm = document.getElementById('expense-form');
     const expenseList = document.getElementById('expense-list');
@@ -44,8 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const budgetOtherRemaining = document.getElementById('budget-other-remaining');
     const budgetOtherSpent = document.getElementById('budget-other-spent');
     const budgetOtherTotal = document.getElementById('budget-other-total');
+    const appVersion = document.getElementById('app-version');
     
-    // --- データベース関連 ---
+    // --- 繝・・繧ｿ繝吶・繧ｹ髢｢騾｣ ---
     let db;
     const DB_NAME = 'ExpenseDB';
     const DB_VERSION = 1;
@@ -76,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- UUID生成 ---
+    // --- UUID逕滓・ ---
     function uuidv4() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -84,9 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- UI初期化 ---
+    // --- UI蛻晄悄蛹・---
     function initializeUI() {
-        // カテゴリのプルダウンを生成
+        // 繧ｫ繝・ざ繝ｪ縺ｮ繝励Ν繝繧ｦ繝ｳ繧堤函謌・
         CATEGORIES.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
@@ -94,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
             categorySelect.appendChild(option);
         });
 
-        // タグのチェックボックスを生成
+        // 繧ｿ繧ｰ縺ｮ繝√ぉ繝・け繝懊ャ繧ｯ繧ｹ繧堤函謌・
         TAGS.forEach(tag => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
@@ -106,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tagsContainer.appendChild(label);
         });
         
-        // メモテンプレートのプルダウンを生成
+        // 繝｡繝｢繝・Φ繝励Ξ繝ｼ繝医・繝励Ν繝繧ｦ繝ｳ繧堤函謌・
         for (const category in MEMO_TEMPLATES) {
             const optgroup = document.createElement('optgroup');
             optgroup.label = category;
@@ -122,31 +125,32 @@ document.addEventListener('DOMContentLoaded', () => {
         memoTemplateSelect.addEventListener('change', (e) => {
             if (e.target.value) {
                 memoInput.value += (memoInput.value ? ' ' : '') + e.target.value;
-                e.target.value = ''; // 選択をリセット
+                e.target.value = ''; // 驕ｸ謚槭ｒ繝ｪ繧ｻ繝・ヨ
             }
         });
+        appVersion.textContent = `更新: ${APP_LAST_UPDATED} (${SW_VERSION})`;
     }
 
-    // --- フォーム表示/非表示 ---
+    // --- 繝輔か繝ｼ繝陦ｨ遉ｺ/髱櫁｡ｨ遉ｺ ---
     function showForm(expense = null) {
         expenseForm.reset();
         document.getElementById('expense-id').value = '';
 
         if (expense) {
-            // 編集モード
+            // 邱ｨ髮・Δ繝ｼ繝・
             document.getElementById('expense-id').value = expense.id;
             document.getElementById('date').value = expense.date;
             document.getElementById('amount').value = expense.amount_jpy;
             document.getElementById('category').value = expense.category;
             memoInput.value = expense.memo;
             
-            // タグを設定
+            // 繧ｿ繧ｰ繧定ｨｭ螳・
             const tags = expense.tags ? expense.tags.split(';') : [];
             document.querySelectorAll('#tags-container input[type="checkbox"]').forEach(cb => {
                 cb.checked = tags.includes(cb.value);
             });
         } else {
-            // 新規登録モード: 日付の初期値を今日に設定
+            // 譁ｰ隕冗匳骭ｲ繝｢繝ｼ繝・ 譌･莉倥・蛻晄悄蛟､繧剃ｻ頑律縺ｫ險ｭ螳・
             document.getElementById('date').value = toJSTDateString(new Date());
         }
         
@@ -158,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         expenseForm.reset();
     }
 
-    // --- CRUD操作 ---
+    // --- CRUD謫堺ｽ・---
     function saveExpense(event) {
         event.preventDefault();
         
@@ -213,13 +217,13 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onerror = (e) => console.error('Error fetching expense for edit:', e.target.error);
     }
 
-    // --- 支出一覧の描画 ---
+    // --- 謾ｯ蜃ｺ荳隕ｧ縺ｮ謠冗判 ---
 function renderExpenses() {
   const transaction = db.transaction([STORE_NAME], 'readonly');
   const store = transaction.objectStore(STORE_NAME);
   const index = store.index('date');
 
-  const expenses = []; //日付で降順ソート
+  const expenses = []; //譌･莉倥〒髯埼・た繝ｼ繝・
 
   index.openCursor(null, 'prev').onsuccess = (event) => {
     const cursor = event.target.result;
@@ -300,7 +304,7 @@ function renderExpenses() {
         return value.replace(/[\r\n]+/g, ' ').trim();
     }
     
-    // HTMLエスケープ
+    // HTML繧ｨ繧ｹ繧ｱ繝ｼ繝・
     function escapeHTML(str) {
         return str.replace(/[&<>"']/g, function(match) {
             return {
@@ -313,7 +317,7 @@ function renderExpenses() {
         });
     }
 
-    // --- CSVエクスポート ---
+    // --- CSV繧ｨ繧ｯ繧ｹ繝昴・繝・---
     function exportToCSV(expenses) {
         const headers = ['id', 'date', 'amount_jpy', 'category', 'tags', 'memo', 'updated_at'];
         let csvContent = headers.join(',') + '\r\n';
@@ -468,7 +472,7 @@ function renderExpenses() {
     }
 
 
-    // --- イベントリスナーの設定 ---
+    // --- 繧､繝吶Φ繝医Μ繧ｹ繝翫・縺ｮ險ｭ螳・---
     addExpenseBtn.addEventListener('click', () => showForm());
     cancelBtn.addEventListener('click', hideForm);
     expenseForm.addEventListener('submit', saveExpense);
@@ -477,7 +481,7 @@ function renderExpenses() {
     deletePrevBtn.addEventListener('click', deletePrevMonthData);
 
 
-    // --- アプリケーションの初期化 ---
+    // --- 繧｢繝励Μ繧ｱ繝ｼ繧ｷ繝ｧ繝ｳ縺ｮ蛻晄悄蛹・---
     async function main() {
         await initDB();
         initializeUI();
@@ -486,3 +490,4 @@ function renderExpenses() {
 
     main();
 });
+
