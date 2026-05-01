@@ -13,7 +13,7 @@
 // Service Worker の登録
 document.addEventListener('DOMContentLoaded', () => {
     const APP_LAST_UPDATED = '2026-05-01';
-    const SW_VERSION = 'v6';
+    const SW_VERSION = 'v7';
     // --- 定数定義 ---
     const CATEGORIES = ['食費', '日用品', '交通', '娯楽', '医療', '交際', '特別支出','美容', 'その他'];
     const TAGS = ['スーパー', 'コンビニ', '飲食店', 'EC', 'ドラッグストア','交通機関', '病院', '美容院'];
