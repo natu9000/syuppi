@@ -10,10 +10,11 @@
 //             });
 //     });
 // }
+// Service Worker の登録
 document.addEventListener('DOMContentLoaded', () => {
     const APP_LAST_UPDATED = '2026-05-01';
     const SW_VERSION = 'v6';
-    // --- 螳壽焚螳夂ｾｩ ---
+    // --- 定数定義 ---
     const CATEGORIES = ['食費', '日用品', '交通', '娯楽', '医療', '交際', '特別支出','美容', 'その他'];
     const TAGS = ['スーパー', 'コンビニ', '飲食店', 'EC', 'ドラッグストア','交通機関', '病院', '美容院'];
     const MEMO_TEMPLATES = {
@@ -29,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const BUDGET_FOOD_INITIAL = 30000;
     const BUDGET_OTHER_INITIAL = 30000;
 
-    // --- DOM隕∫ｴ縺ｮ蜿門ｾ・---
+    // --- DOM 要素の取得 ---
     const expenseFormContainer = document.getElementById('expense-form-container');
     const expenseForm = document.getElementById('expense-form');
     const expenseList = document.getElementById('expense-list');
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const budgetOtherTotal = document.getElementById('budget-other-total');
     const appVersion = document.getElementById('app-version');
     
-    // --- 繝・・繧ｿ繝吶・繧ｹ髢｢騾｣ ---
+    // --- データベース関連 ---
     let db;
     const DB_NAME = 'ExpenseDB';
     const DB_VERSION = 1;
@@ -81,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- UUID逕滓・ ---
+    // --- UUID 生成 ---
     function uuidv4() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -89,9 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- UI蛻晄悄蛹・---
+    // --- UI 初期化 ---
     function initializeUI() {
-        // 繧ｫ繝・ざ繝ｪ縺ｮ繝励Ν繝繧ｦ繝ｳ繧堤函謌・
+        // カテゴリのプルダウンを生成
         CATEGORIES.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat;
@@ -99,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             categorySelect.appendChild(option);
         });
 
-        // 繧ｿ繧ｰ縺ｮ繝√ぉ繝・け繝懊ャ繧ｯ繧ｹ繧堤函謌・
+        // タグのチェックボックスを生成
         TAGS.forEach(tag => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
@@ -111,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tagsContainer.appendChild(label);
         });
         
-        // 繝｡繝｢繝・Φ繝励Ξ繝ｼ繝医・繝励Ν繝繧ｦ繝ｳ繧堤函謌・
+        // メモテンプレートのプルダウンを生成
         for (const category in MEMO_TEMPLATES) {
             const optgroup = document.createElement('optgroup');
             optgroup.label = category;
@@ -127,32 +128,32 @@ document.addEventListener('DOMContentLoaded', () => {
         memoTemplateSelect.addEventListener('change', (e) => {
             if (e.target.value) {
                 memoInput.value += (memoInput.value ? ' ' : '') + e.target.value;
-                e.target.value = ''; // 驕ｸ謚槭ｒ繝ｪ繧ｻ繝・ヨ
+                e.target.value = ''; // 選択をリセット
             }
         });
         appVersion.textContent = `更新: ${APP_LAST_UPDATED} (${SW_VERSION})`;
     }
 
-    // --- 繝輔か繝ｼ繝陦ｨ遉ｺ/髱櫁｡ｨ遉ｺ ---
+    // --- フォーム表示/非表示 ---
     function showForm(expense = null) {
         expenseForm.reset();
         document.getElementById('expense-id').value = '';
 
         if (expense) {
-            // 邱ｨ髮・Δ繝ｼ繝・
+            // 編集モード
             document.getElementById('expense-id').value = expense.id;
             document.getElementById('date').value = expense.date;
             document.getElementById('amount').value = expense.amount_jpy;
             document.getElementById('category').value = expense.category;
             memoInput.value = expense.memo;
             
-            // 繧ｿ繧ｰ繧定ｨｭ螳・
+            // タグを復元
             const tags = expense.tags ? expense.tags.split(';') : [];
             document.querySelectorAll('#tags-container input[type="checkbox"]').forEach(cb => {
                 cb.checked = tags.includes(cb.value);
             });
         } else {
-            // 譁ｰ隕冗匳骭ｲ繝｢繝ｼ繝・ 譌･莉倥・蛻晄悄蛟､繧剃ｻ頑律縺ｫ險ｭ螳・
+            // 新規登録モードでは今日の日付を初期値に設定
             document.getElementById('date').value = toJSTDateString(new Date());
         }
         
@@ -164,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         expenseForm.reset();
     }
 
-    // --- CRUD謫堺ｽ・---
+    // --- CRUD 処理 ---
     function saveExpense(event) {
         event.preventDefault();
         
@@ -219,13 +220,13 @@ document.addEventListener('DOMContentLoaded', () => {
         request.onerror = (e) => console.error('Error fetching expense for edit:', e.target.error);
     }
 
-    // --- 謾ｯ蜃ｺ荳隕ｧ縺ｮ謠冗判 ---
+    // --- 支出一覧の描画 ---
 function renderExpenses() {
   const transaction = db.transaction([STORE_NAME], 'readonly');
   const store = transaction.objectStore(STORE_NAME);
   const index = store.index('date');
 
-  const expenses = []; //譌･莉倥〒髯埼・た繝ｼ繝・
+  const expenses = []; // 日付の降順で保持
 
   index.openCursor(null, 'prev').onsuccess = (event) => {
     const cursor = event.target.result;
@@ -306,7 +307,7 @@ function renderExpenses() {
         return value.replace(/[\r\n]+/g, ' ').trim();
     }
     
-    // HTML繧ｨ繧ｹ繧ｱ繝ｼ繝・
+    // HTML エスケープ
     function escapeHTML(str) {
         return str.replace(/[&<>"']/g, function(match) {
             return {
@@ -319,7 +320,7 @@ function renderExpenses() {
         });
     }
 
-    // --- CSV繧ｨ繧ｯ繧ｹ繝昴・繝・---
+    // --- CSV エクスポート ---
     function exportToCSV(expenses) {
         const headers = ['id', 'date', 'amount_jpy', 'category', 'tags', 'memo', 'updated_at'];
         let csvContent = headers.join(',') + '\r\n';
@@ -474,7 +475,7 @@ function renderExpenses() {
     }
 
 
-    // --- 繧､繝吶Φ繝医Μ繧ｹ繝翫・縺ｮ險ｭ螳・---
+    // --- イベントリスナーの設定 ---
     addExpenseBtn.addEventListener('click', () => showForm());
     cancelBtn.addEventListener('click', hideForm);
     expenseForm.addEventListener('submit', saveExpense);
@@ -483,7 +484,7 @@ function renderExpenses() {
     deletePrevBtn.addEventListener('click', deletePrevMonthData);
 
 
-    // --- 繧｢繝励Μ繧ｱ繝ｼ繧ｷ繝ｧ繝ｳ縺ｮ蛻晄悄蛹・---
+    // --- アプリケーションの初期化 ---
     async function main() {
         await initDB();
         initializeUI();
